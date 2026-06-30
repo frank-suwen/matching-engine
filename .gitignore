@@ -1,0 +1,20 @@
+# build artifacts
+*.o
+*.out
+*.exe
+order_book_test
+
+# build directories
+build/
+cmake-build-*/
+
+# perf / benchmark artifacts
+perf.data
+perf.data.old
+*.svg
+*.csv
+
+# editor/system files
+.vscode/
+.idea/
+.DS_Store
