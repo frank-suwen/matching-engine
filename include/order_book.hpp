@@ -6,6 +6,7 @@
 #include <optional>
 #include <stdexcept>
 #include <unordered_map>
+#include <vector>
 
 namespace ob {
 
@@ -122,6 +123,32 @@ public:
             return std::nullopt;
         }
         return asks_.begin()->first;
+    }
+
+    std::vector<OrderId> order_ids_at_price(Side side, Price price) const {
+        std::vector<OrderId> ids;
+
+        if (side == Side::Buy) {
+            auto level_it = bids_.find(price);
+            if (level_it == bids_.end()) {
+                return ids;
+            }
+
+            for (const auto& order : level_it->second) {
+                ids.push_back(order.id);
+            }
+        } else {
+            auto level_it = asks_.find(price);
+            if (level_it == asks_.end()) {
+                return ids;
+            }
+
+            for (const auto& order : level_it->second) {
+                ids.push_back(order.id);
+            }
+        }
+
+        return ids;
     }
 
     std::size_t order_count() const {

@@ -3,6 +3,7 @@
 #include <cassert>
 #include <iostream>
 #include <stdexcept>
+#include <vector>
 
 void test_empty_book() {
     ob::OrderBook book;
@@ -96,6 +97,24 @@ void test_invalid_quantity_throws() {
     assert(book.order_count() == 0);
 }
 
+void test_fifo_order_at_price_level() {
+    ob::OrderBook book;
+    
+    assert(book.add_order(1, ob::Side::Buy, 10000, 10));
+    assert(book.add_order(2, ob::Side::Buy, 10000, 20));
+    assert(book.add_order(3, ob::Side::Buy, 10000, 30));
+
+    std::vector<ob::OrderId> ids = book.order_ids_at_price(ob::Side::Buy, 10000);
+
+    assert((ids == std::vector<ob::OrderId>{1, 2, 3}));
+
+    assert(book.cancel_order(2));
+
+    ids = book.order_ids_at_price(ob::Side::Buy, 10000);
+
+    assert((ids == std::vector<ob::OrderId>{1, 3}));
+}
+
 int main() {
     test_empty_book();
     test_best_bid_and_ask();
@@ -104,6 +123,7 @@ int main() {
     test_cancel_updates_best_price();
     test_price_level_cleanup();
     test_invalid_quantity_throws();
+    test_fifo_order_at_price_level();
 
     std::cout << "All order book Stage 1 correctness tests passed.\n";
     return 0;
