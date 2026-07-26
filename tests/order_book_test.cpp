@@ -1,4 +1,4 @@
-#include "../include/order_book.hpp"
+#include "order_book.hpp"
 
 #include <cassert>
 #include <iostream>
