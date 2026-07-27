@@ -4,8 +4,10 @@
 *.exe
 order_book_test
 
-# build directories
+# CMake build directories
 build/
+build-debug/
+build-release/
 cmake-build-*/
 
 # perf / benchmark artifacts
