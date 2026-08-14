@@ -6,9 +6,18 @@ add_executable(order_book_test
     tests/order_book_test.cpp
 )
 
+add_executable(container_benchmarks
+    benchmarks/container_benchmarks.cpp
+)
+
 target_include_directories(order_book_test
     PRIVATE
         ${PROJECT_SOURCE_DIR}/include
+)
+
+target_compile_features(container_benchmarks
+    PRIVATE
+        cxx_std_20
 )
 
 target_compile_features(order_book_test
