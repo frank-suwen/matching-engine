@@ -221,4 +221,3 @@ systems integration
 ```
 
 Each stage is designed to establish correct behavior and clear invariants before introducing additional performance or concurrency complexity.
-```
