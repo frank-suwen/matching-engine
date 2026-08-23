@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
+#include <list>
 #include <map>
 #include <unordered_map>
 #include <vector>
@@ -144,6 +145,47 @@ void benchmark_unordered_map_lookup(
         << '\n';
 }
 
+void benchmark_list_erase(std::size_t n) {
+    std::list<std::uint64_t> values;
+    std::vector<std::list<std::uint64_t>::iterator> iterators;
+
+    iterators.reserve(n);
+
+    for (std::size_t i = 0; i < n; ++i) {
+        values.push_back(static_cast<std::uint64_t>(i));
+
+        auto it = values.end();
+        --it;
+
+        iterators.push_back(it);
+    }
+
+    const auto start = Clock::now();
+
+    for (const auto it : iterators) {
+        values.erase(it);
+    }
+
+    const auto end = Clock::now();
+
+    const auto elapsed_ns = 
+        std::chrono::duration_cast<std::chrono::nanoseconds>(
+            end - start
+        ).count();
+    
+    const double ns_per_operation = 
+        static_cast<double>(elapsed_ns) /
+        static_cast<double>(n);
+    
+    std::cout
+        << "std::list erase(iterator)"
+        << " | N = " << n
+        << " | total = " << elapsed_ns << " ns"
+        << " | average = " << ns_per_operation << " ns/op"
+        << " | final size = " << values.size()
+        << '\n';
+}
+
 int main() {
     constexpr std::size_t lookup_count = 1'000'000;
 
@@ -151,6 +193,7 @@ int main() {
         benchmark_map_insert(n);
         benchmark_map_lookup(n, lookup_count);
         benchmark_unordered_map_lookup(n, lookup_count);
+        benchmark_list_erase(n);
 
         std::cout << '\n';
     }
