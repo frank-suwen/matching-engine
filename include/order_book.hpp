@@ -167,6 +167,16 @@ public:
         return orders_.size();
     }
 
+    std::optional<Quantity> order_quantity(OrderId id) const {
+        auto found = orders_.find(id);
+
+        if (found == orders_.end()) {
+            return std::nullopt;
+        }
+
+        return found->second.iterator->quantity;
+    }
+
     std::size_t bid_level_count() const {
         return bids_.size();
     }
