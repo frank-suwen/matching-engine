@@ -26,6 +26,18 @@ struct Order {
     Quantity quantity;
 };
 
+struct Trade {
+    OrderId aggressive_order_id;
+    OrderId passive_order_id;
+    Price price;
+    Quantity quantity;
+};
+
+struct MatchRest {
+    std::vector<Trade> trades;
+    Quantity resting_quantity;
+};
+
 struct BidComparator {
     bool operator()(Price lhs, Price rhs) const {
         return lhs > rhs; // highest bid first
