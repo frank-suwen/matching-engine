@@ -87,6 +87,26 @@ public:
         return true;
     }
 
+    std::optional<MatchRest> submit_order(
+        OrderId id,
+        Side side,
+        Price price,
+        Quantity quantity
+    ) {
+        // 1. Validate quantity.
+        if (quantity <= 0) {
+            throw std::invalid_argument("quantity must be positive");
+        }
+
+        // 2. Reject duplicate active order IDs.
+        if (orders_.comtains(id)) {
+            return std::nullopt;
+        }
+
+        // 3. Matching logic is not implemented yet.
+        throw std::logic_error("matching not implemented");
+    }
+
     bool cancel_order(OrderId id) {
         auto found = orders_.find(id);
         if (found == orders_.end()) {
