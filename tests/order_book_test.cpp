@@ -5,12 +5,14 @@
 #include <stdexcept>
 #include <vector>
 
+using namespace ob;
+
 void assert_trade(
-    const Trade& trade,
-    OrderId aggressive_order_id,
-    OrderId passive_order_id,
-    Price price,
-    Quantity quantity
+    const ob::Trade& trade,
+    ob::OrderId aggressive_order_id,
+    ob::OrderId passive_order_id,
+    ob::Price price,
+    ob::Quantity quantity
 ) {
     assert(trade.aggressive_order_id == aggressive_order_id);
     assert(trade.passive_order_id == passive_order_id);
@@ -18,8 +20,8 @@ void assert_trade(
     assert(trade.quantity == quantity);
 }
 
-Quantity traded_quantity(const MatchResult& result) {
-    Quantity total = 0;
+ob::Quantity traded_quantity(const ob::MatchResult& result) {
+    ob::Quantity total = 0;
 
     for (const auto& trade : result.trades) {
         total += trade.quantity;
@@ -140,7 +142,7 @@ void test_fifo_order_at_price_level() {
 
 // non-crossing buy rests
 void test_buy_does_not_cross_ask() {
-    Order book;
+    OrderBook book;
 
     auto ask_result = book.submit_order(1, Side::Sell, 101, 20);
     
@@ -150,7 +152,7 @@ void test_buy_does_not_cross_ask() {
 
     auto buy_result = book.submit_order(10, Side::Buy, 100, 15);
 
-    assert(buy_result.has_value);
+    assert(buy_result.has_value());
     assert(buy_result->trades.empty());
     assert(buy_result->resting_quantity == 15);
 
@@ -174,7 +176,7 @@ void test_buy_crosses_ask_with_partial_resting_fill() {
     auto buy_result = book.submit_order(10, Side::Buy, 101, 15);
 
     assert(buy_result.has_value());
-    assert(buy_result->trade.size() == 1);
+    assert(buy_result->trades.size() == 1);
 
     assert_trade(buy_result->trades[0], 10, 1, 100, 15);
 
@@ -195,14 +197,14 @@ void test_full_fill_removes_resting_order() {
 
     auto ask_result = book.submit_order(1, Side::Sell, 100, 10);
 
-    assert(ask_result.has_value);
+    assert(ask_result.has_value());
 
     auto buy_result = book.submit_order(10, Side::Buy, 100, 10);
 
-    assert(buy_result.has_value);
+    assert(buy_result.has_value());
     assert(buy_result->trades.size() == 1);
 
-    assert_trade(buy_result->trades[0], buy_result->trades[0], 10, 1, 100, 10);
+    assert_trade(buy_result->trades[0], 10, 1, 100, 10);
 
     assert(buy_result->resting_quantity == 0);
 
@@ -327,7 +329,7 @@ void test_duplicate_order_id_rejected_without_mutation() {
     assert(book.order_count() == 1);
 
     assert(book.best_bid() == 100);
-    assert(!book.best_ask().has_value())
+    assert(!book.best_ask().has_value());
 
     assert(book.order_quantity(1) == 10);
     

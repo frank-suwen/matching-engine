@@ -33,7 +33,7 @@ struct Trade {
     Quantity quantity;
 };
 
-struct MatchRest {
+struct MatchResult {
     std::vector<Trade> trades;
     Quantity resting_quantity;
 };
@@ -87,7 +87,7 @@ public:
         return true;
     }
 
-    std::optional<MatchRest> submit_order(
+    std::optional<MatchResult> submit_order(
         OrderId id,
         Side side,
         Price price,
@@ -99,7 +99,7 @@ public:
         }
 
         // 2. Reject duplicate active order IDs.
-        if (orders_.comtains(id)) {
+        if (orders_.contains(id)) {
             return std::nullopt;
         }
 
