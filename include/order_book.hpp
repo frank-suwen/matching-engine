@@ -62,6 +62,14 @@ private:
         OrderList::iterator iterator;
     };
 
+    bool crosses(Side side, Price price) const {
+        if (side == Side::Buy) {
+            return !asks_.empty() && price >= asks_.begin()->first;
+        }
+
+        return !bids_.empty() && price <= bids_.begin()->first;
+    }
+
 public:
     bool add_order(OrderId id, Side side, Price price, Quantity quantity) {
         if (quantity <= 0) {
