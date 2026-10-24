@@ -111,7 +111,17 @@ public:
             return std::nullopt;
         }
 
-        // 3. Matching logic is not implemented yet.
+        // 3. No crossing: the entire incoming order rests.
+        if (!crosses(side, price)) {
+            add_order(id, side, price, quantity);
+
+            return MatchResult{
+                .trades = {},
+                .resting_quantity = quantity
+            };
+        }
+
+        // 4. Crossing behavior comes next.
         throw std::logic_error("matching not implemented");
     }
 
