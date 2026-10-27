@@ -1,5 +1,6 @@
 #pragma once 
 
+#include <algorithm>
 #include <cstdint>
 #include <list>
 #include <map>
@@ -121,8 +122,54 @@ public:
             };
         }
 
-        // 4. Crossing behavior comes next.
-        throw std::logic_error("matching not implemented");
+        // 4. Prepare the result
+        MatchResult result{
+            .trades = {},
+            .resting_quantity = 0
+        };
+
+        // 5. First implementation: one buy-side execution.
+        if (side == Side::Buy) {
+            auto level_it = asks_.begin();
+            auto order_it = level_it->second.begin();
+
+            Quantity executed_quantity = std::min(quantity, order_it->quantity);
+
+            // Record the execution.
+            result.trades.push_back(Trade{
+                id,
+                order_it->id,
+                level_it->first,
+                executed_quantity
+            });
+
+            // Update quantities.
+            quantity -= executed_quantity;
+            order_it->quantity -= executed_quantity;
+
+            // Remove a fully filled resting order.
+            if (order_it->quantity == 0) {
+                orders_.erase(order_it->id);
+                level_it->second.erase(order_it);
+
+                if (level_it->second.empty()) {
+                    asks_.erase(level_it);
+                }
+            }
+
+            // Multiple executions are not implemented yet.
+            if (quantity > 0) {
+                throw std::logic_error(
+                    "incoming remainder handling not implemented"
+                );
+            }
+
+            return result;
+        }
+
+        throw std::logic_error(
+            "sell-side matching not implemented"
+        );
     }
 
     bool cancel_order(OrderId id) {
