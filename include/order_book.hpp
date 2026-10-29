@@ -112,7 +112,7 @@ public:
             return std::nullopt;
         }
 
-        // 3. No crossing: the entire incoming order rests.
+        // 3. Non-crossing orders rest immediately.
         if (!crosses(side, price)) {
             add_order(id, side, price, quantity);
 
@@ -122,13 +122,13 @@ public:
             };
         }
 
-        // 4. Prepare the result
+        // 4. Prepare matching result.
         MatchResult result{
             .trades = {},
             .resting_quantity = 0
         };
 
-        // 5. First implementation: one buy-side execution.
+        // 5. Buy-side matching.
         if (side == Side::Buy) {
             while (quantity > 0 && crosses(side, price)) {
                 // 1. Select the best ask price level.
@@ -175,6 +175,7 @@ public:
             return result;
         }
 
+        // 6. Sell-side matching comes next.
         throw std::logic_error(
             "sell-side matching not implemented"
         );
