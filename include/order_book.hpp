@@ -130,38 +130,46 @@ public:
 
         // 5. First implementation: one buy-side execution.
         if (side == Side::Buy) {
-            auto level_it = asks_.begin();
-            auto order_it = level_it->second.begin();
+            while (quantity > 0 && crosses(side, price)) {
+                // 1. Select the best ask price level.
+                auto level_it = asks_.begin();
 
-            Quantity executed_quantity = std::min(quantity, order_it->quantity);
+                // 2. Select the oldest resting order.
+                auto order_it = level_it->second.begin();
 
-            // Record the execution.
-            result.trades.push_back(Trade{
-                id,
-                order_it->id,
-                level_it->first,
-                executed_quantity
-            });
+                // 3. Calculate execution quantity.
+                Quantity executed_quantity = std::min(quantity, order_it->quantity);
 
-            // Update quantities.
-            quantity -= executed_quantity;
-            order_it->quantity -= executed_quantity;
+                // 4. Generate trade.
+                result.trades.push_back(Trade{
+                    id,
+                    order_it->id,
+                    level_it->first,
+                    executed_quantity
+                });
 
-            // Remove a fully filled resting order.
-            if (order_it->quantity == 0) {
-                orders_.erase(order_it->id);
-                level_it->second.erase(order_it);
+                // 5. Update quantities.
+                quantity -= executed_quantity;
+                order_it->quantity -= executed_quantity;
 
-                if (level_it->second.empty()) {
-                    asks_.erase(level_it);
+                // 6. Remove fully filled resting order.
+                if (order_it->quantity == 0) {
+                    orders_.erase(order_it->id);
+
+                    level_it->second.erase(order_it);
+
+                    // Remove empty price level.
+                    if (level_it->second.empty()) {
+                        asks_.erase(level_it);
+                    }
                 }
+
             }
 
-            // Multiple executions are not implemented yet.
+            // 7. Rest any unmatched incoming quantity.
             if (quantity > 0) {
-                throw std::logic_error(
-                    "incoming remainder handling not implemented"
-                );
+                add_order(id, side, price, quantity);
+                result.resting_quantity = quantity;
             }
 
             return result;
