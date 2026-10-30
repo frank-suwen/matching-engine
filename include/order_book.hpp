@@ -175,10 +175,47 @@ public:
             return result;
         }
 
-        // 6. Sell-side matching comes next.
-        throw std::logic_error(
-            "sell-side matching not implemented"
-        );
+        if (side == Side::Sell) {
+            while (quantity > 0 && crosses(side, price)) {
+                // 1. Select the best bid price level.
+                auto level_it = bids_.begin();
+
+                // 2. Select the oldest resting bid.
+                auto order_it = level_it->second.begin();
+
+                // 3. Calculate execution quantity.
+                Quantity executed_quantity = std::min(quantity, order_it->quantity);
+
+                // 4. Generate trade at the resting bid price.
+                result.trades.push_back(Trade{
+                    id,
+                    order_it->id,
+                    level_it->first,
+                    executed_quantity
+                });
+
+                // 5. Update both quantities.
+                quantity -= executed_quantity;
+                order_it->quantity -= executed_quantity;
+
+                // 6. Remove fully filled resting orders.
+                if (order_it->quantity == 0) {
+                    orders_.erase(order_it->id);
+
+                    level_it->second.erase(order_it);
+
+                    if (level_it->second.empty()) {
+                        bids_.erase(level_it);
+                    }
+                }
+            }
+
+            // 7. Rest any unmatched incoming quantity.
+            if (quantity > 0) {
+                add_order(id, side, price, quantity);
+                result.resting_quantity = quantity;
+            }
+        }
     }
 
     bool cancel_order(OrderId id) {
