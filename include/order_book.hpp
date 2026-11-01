@@ -215,7 +215,11 @@ public:
                 add_order(id, side, price, quantity);
                 result.resting_quantity = quantity;
             }
+
+            return result;
         }
+
+        throw std::invalid_argument("invalid order side");
     }
 
     bool cancel_order(OrderId id) {
