@@ -71,6 +71,59 @@ private:
         return !bids_.empty() && price <= bids_.begin()->first;
     }
 
+    template <typename BookType>
+    void match_against(
+        BookType& opposite_book,
+        OrderId incoming_id,
+        Side incoming_side,
+        Price limit_price,
+        Quantity& remaining_quantity,
+        MatchResult& result
+    ) {
+        while (remaining_quantity > 0 && !opposite_book.empty()) {
+            
+            // 1. Select the best opposite price level.
+            auto level_it = opposite_book.begin();
+            const Price resting_price = level_it->first;
+
+            // 2. Check whether the prices cross.
+            const bool is_crossing = incoming_side == Side::Buy ? limit_price >= resting_price : limit_price <= resting_price;
+
+            if (!is_crossing) {
+                break;
+            }
+
+            // 3. Select the oldest resting order.
+            auto order_it = level_it->second.begin();
+
+            // 4. Calculate execution quantity.
+            const Quantity executed_quantity = std::min(remaining_quantity, order_it->quantity);
+
+            // 5. Record the trade before mutating the book.
+            result.trades.push_back(Trade{
+                incoming_id,
+                order_it->id,
+                resting_price,
+                executed_quantity
+            });
+
+            // 6. Update quantities.
+            remaining_quantity -= executed_quantity;
+            order_it->quantity -= executed_quantity;
+
+            // 7. Remove fully filled resting orders.
+            if (order_it->quantity == 0) {
+                orders_.erase(order_it->id);
+                level_it->second.erase(order_it);
+
+                // 8. Remove empty price levels.
+                if (level_it->second.empty()) {
+                    opposite_book.erase(level_it);
+                }
+            }
+        }
+    }
+
 public:
     bool add_order(OrderId id, Side side, Price price, Quantity quantity) {
         if (quantity <= 0) {
@@ -107,119 +160,49 @@ public:
             throw std::invalid_argument("quantity must be positive");
         }
 
+        if (side != Side::Buy && side != Side::Sell) {
+            throw std::invalid_argument("invalid order side");
+        }
+
         // 2. Reject duplicate active order IDs.
         if (orders_.contains(id)) {
             return std::nullopt;
         }
 
-        // 3. Non-crossing orders rest immediately.
-        if (!crosses(side, price)) {
-            add_order(id, side, price, quantity);
-
-            return MatchResult{
-                .trades = {},
-                .resting_quantity = quantity
-            };
-        }
-
-        // 4. Prepare matching result.
+        // 3. Prepare matching result.
         MatchResult result{
             .trades = {},
             .resting_quantity = 0
         };
 
-        // 5. Buy-side matching.
+        // 4. Match against the opposite-side book.
         if (side == Side::Buy) {
-            while (quantity > 0 && crosses(side, price)) {
-                // 1. Select the best ask price level.
-                auto level_it = asks_.begin();
-
-                // 2. Select the oldest resting order.
-                auto order_it = level_it->second.begin();
-
-                // 3. Calculate execution quantity.
-                Quantity executed_quantity = std::min(quantity, order_it->quantity);
-
-                // 4. Generate trade.
-                result.trades.push_back(Trade{
-                    id,
-                    order_it->id,
-                    level_it->first,
-                    executed_quantity
-                });
-
-                // 5. Update quantities.
-                quantity -= executed_quantity;
-                order_it->quantity -= executed_quantity;
-
-                // 6. Remove fully filled resting order.
-                if (order_it->quantity == 0) {
-                    orders_.erase(order_it->id);
-
-                    level_it->second.erase(order_it);
-
-                    // Remove empty price level.
-                    if (level_it->second.empty()) {
-                        asks_.erase(level_it);
-                    }
-                }
-
-            }
-
-            // 7. Rest any unmatched incoming quantity.
-            if (quantity > 0) {
-                add_order(id, side, price, quantity);
-                result.resting_quantity = quantity;
-            }
-
-            return result;
+            match_against(
+                asks_,
+                id,
+                side,
+                price,
+                quantity,
+                result
+            );
+        } else {
+            match_against(
+                bids_,
+                id,
+                side,
+                price,
+                quantity,
+                result
+            );
         }
 
-        if (side == Side::Sell) {
-            while (quantity > 0 && crosses(side, price)) {
-                // 1. Select the best bid price level.
-                auto level_it = bids_.begin();
-
-                // 2. Select the oldest resting bid.
-                auto order_it = level_it->second.begin();
-
-                // 3. Calculate execution quantity.
-                Quantity executed_quantity = std::min(quantity, order_it->quantity);
-
-                // 4. Generate trade at the resting bid price.
-                result.trades.push_back(Trade{
-                    id,
-                    order_it->id,
-                    level_it->first,
-                    executed_quantity
-                });
-
-                // 5. Update both quantities.
-                quantity -= executed_quantity;
-                order_it->quantity -= executed_quantity;
-
-                // 6. Remove fully filled resting orders.
-                if (order_it->quantity == 0) {
-                    orders_.erase(order_it->id);
-
-                    level_it->second.erase(order_it);
-
-                    if (level_it->second.empty()) {
-                        bids_.erase(level_it);
-                    }
-                }
-            }
-
-            // 7. Rest any unmatched incoming quantity.
-            if (quantity > 0) {
-                add_order(id, side, price, quantity);
-                result.resting_quantity = quantity;
-            }
-
-            return result;
+        // 5. Rest any unmatched incoming quantity
+        if (quantity > 0) {
+            add_order(id, side, price, quantity);
+            result.resting_quantity = quantity;
         }
 
-        throw std::invalid_argument("invalid order side");
+        return result;
     }
 
     bool cancel_order(OrderId id) {
