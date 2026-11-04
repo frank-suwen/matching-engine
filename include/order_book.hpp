@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <iterator>
 #include <list>
 #include <map>
 #include <optional>
@@ -124,31 +125,32 @@ private:
         }
     }
 
-public:
-    bool add_order(OrderId id, Side side, Price price, Quantity quantity) {
-        if (quantity <= 0) {
-            throw std::invalid_argument("quantity must be positive");
-        }
-
-        if (orders_.contains(id)) {
-            return false; // duplicate order id
-        }
+    void rest_order(OrderId id, Side side, Price price, Quantity quantity) {
+        // Preconditions enforced by submit_order():
+        // quantity > 0
+        // id is not active
+        // side is valid
 
         if (side == Side::Buy) {
             auto& level = bids_[price];
+
             level.push_back(Order{id, side, price, quantity});
+
             auto it = std::prev(level.end());
+
             orders_.emplace(id, OrderLocation{side, price, it});
         } else {
             auto& level = asks_[price];
+
             level.push_back(Order{id, side, price, quantity});
+
             auto it = std::prev(level.end());
+
             orders_.emplace(id, OrderLocation{side, price, it});
         }
-
-        return true;
     }
 
+public:
     std::optional<MatchResult> submit_order(
         OrderId id,
         Side side,
@@ -198,7 +200,7 @@ public:
 
         // 5. Rest any unmatched incoming quantity
         if (quantity > 0) {
-            add_order(id, side, price, quantity);
+            rest_order(id, side, price, quantity);
             result.resting_quantity = quantity;
         }
 
