@@ -349,6 +349,70 @@ void test_sell_sweeps_multiple_bid_levels() {
     assert(traded_quantity(*sell_result) + sell_result->resting_quantity == 30);
 }
 
+void test_cancel_after_partial_fill() {
+    OrderBook book;
+
+    auto ask_result = book.submit_order(1, Side::Sell, 100, 20);
+
+    assert(ask_result.has_value());
+
+    auto buy_result = book.submit_order(2, Side::Buy, 101, 7);
+
+    assert(buy_result.has_value());
+    assert(buy_result->trades.size() == 1);
+
+    assert_trade(
+        buy_result->trades[0],
+        2, 1, 100, 7
+    );
+
+    // The resting order was modified in place.
+    assert(book.order_quantity(1) == 13);
+
+    // Cancellation must still find its iterator.
+    const bool cancelled = book.cancel_order(1);
+
+    assert(cancelled);
+
+    // The ID index and price level msut be cleaned up.
+    assert(!book.order_quantity(1).has_value());
+    assert(!book.best_ask().has_value());
+
+    assert(book.order_count() == 0);
+    assert(book.ask_level_count() == 0);
+}
+
+void test_cancel_incoming_remainder() {
+    OrderBook book;
+
+    auto bid = book.submit_order(1, Side::Buy, 100, 5);
+
+    assert(bid.has_value());
+
+    auto sell = book.submit_order(10, Side::Sell, 100, 12);
+
+    assert(sell.has_value());
+    assert(sell->trades.size() == 1);
+
+    assert_trade(
+        sell->trades[0],
+        10, 1, 100, 5
+    );
+
+    assert(sell->resting_quantity == 7);
+    assert(book.order_quantity(10) == 7);
+
+    const bool cancelled = book.cancel_order(10);
+
+    assert(cancelled);
+
+    assert(!book.order_quantity(10).has_value());
+    assert(!book.best_ask().has_value());
+
+    assert(book.order_count() == 0);
+    assert(book.ask_level_count() == 0);
+}
+
 int main() {
     // Stage 2 matching tests.
     test_buy_does_not_cross_ask();
@@ -364,6 +428,10 @@ int main() {
     test_sell_crosses_best_bid();
     test_sell_fifo_priority_at_same_price();
     test_sell_sweeps_multiple_bid_levels();
+
+    // New regression test for cancellation after a partial fill
+    test_cancel_after_partial_fill();
+    test_cancel_incoming_remainder();
 
     std::cout << "All new order book Stage 2 correctness tests passed.\n";
     return 0;
