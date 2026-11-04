@@ -50,3 +50,17 @@ add_test(
     NAME matching_test
     COMMAND matching_test
 )
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    foreach(test_target IN ITEMS
+        order_book_test
+        matching_test
+    )
+        target_compile_options(${test_target} PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+            -Werror=return-type
+        )
+    endforeach()
+endif()
