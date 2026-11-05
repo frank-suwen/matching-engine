@@ -480,6 +480,36 @@ void test_partial_fill_preserves_fifo_priority() {
     assert_book_not_crossed(book);
 }
 
+// new regression test: reusing an ID after full execution
+void test_order_id_reuse_after_full_fill() {
+    OrderBook book;
+
+    auto ask = book.submit_order(1, Side::Sell, 100, 5);
+
+    assert(ask.has_value());
+
+    auto buy = book.submit_order(2, Side::Buy, 100, 5);
+
+    assert(buy.has_value());
+    assert(buy->trades.size() == 1);
+
+    // Both original orders are fully executed.
+    assert(book.order_count() == 0);
+
+    // Reuse the previously completed order ID.
+    auto reused = book.submit_order(1, Side::Buy, 99, 3);
+
+    assert(reused.has_value());
+    assert(reused->trades.empty());
+    assert(reused->resting_quantity == 3);
+
+    assert(book.order_quantity(1) == 3);
+    assert(book.best_bid() == 99);
+    assert(book.order_count() == 1);
+
+    assert_book_not_crossed(book);
+}
+
 int main() {
     // Stage 2 matching tests.
     test_buy_does_not_cross_ask();
@@ -502,6 +532,7 @@ int main() {
 
     // New regression test for invariants
     test_partial_fill_preserves_fifo_priority();
+    test_order_id_reuse_after_full_fill();
 
     std::cout << "All new order book Stage 2 correctness tests passed.\n";
     return 0;
