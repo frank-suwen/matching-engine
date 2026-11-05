@@ -30,6 +30,15 @@ ob::Quantity traded_quantity(const ob::MatchResult& result) {
     return total;
 }
 
+void assert_book_not_crossed(const OrderBook& book) {
+    auto bid = book.best_bid();
+    auto ask = book.best_ask();
+
+    if (bid.has_value() && ask.has_value()) {
+        assert(*bid < *ask);
+    }
+}
+
 // non-crossing buy rests
 void test_buy_does_not_cross_ask() {
     OrderBook book;
