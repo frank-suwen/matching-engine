@@ -130,23 +130,22 @@ private:
         // quantity > 0
         // id is not active
         // side is valid
-
         if (side == Side::Buy) {
-            auto& level = bids_[price];
-
-            level.push_back(Order{id, side, price, quantity});
-
-            auto it = std::prev(level.end());
-
-            orders_.emplace(id, OrderLocation{side, price, it});
+            rest_in_book(
+                bids_,
+                id,
+                side,
+                price,
+                quantity
+            );
         } else {
-            auto& level = asks_[price];
-
-            level.push_back(Order{id, side, price, quantity});
-
-            auto it = std::prev(level.end());
-
-            orders_.emplace(id, OrderLocation{side, price, it});
+            rest_in_book(
+                asks_,
+                id,
+                side,
+                price,
+                quantity
+            );
         }
     }
 
