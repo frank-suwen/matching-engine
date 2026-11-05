@@ -422,6 +422,64 @@ void test_cancel_incoming_remainder() {
     assert(book.ask_level_count() == 0);
 }
 
+// new regression test: does a partial fill preserve FIFO priority
+void test_partial_fill_preserves_fifo_priority() {
+    OrderBook book;
+
+    auto first = book.submit_order(1, Side::Sell, 100, 10);
+    auto second = book.submit_order(2, Side::Sell, 100, 10);
+    auto third = book.submit_order(3, Side::Sell, 100, 10);
+
+    assert(first.has_value());
+    assert(second.has_value());
+    assert(third.has_value());
+
+    // first incoming buy partially fills #1.
+    auto buy1 = book.submit_order(10, Side::Buy, 100, 4);
+    
+    assert(buy1.has_value());
+    assert(buy1->trades.size() == 1);
+
+    assert_trade(
+        buy1->trades[0],
+        10, 1, 100, 4
+    );
+
+    assert(book.order_quantity(1) == 6);
+
+    // FIFO ordering must remain unchanged.
+    const std::vector<OrderId> before{1, 2, 3};
+
+    assert(book.order_ids_at_price(Side::Sell, 100) == before);
+
+    // Second incoming buy must finish #1 first
+    auto buy2 = book.submit_order(11, Side::Buy, 100, 8);
+
+    assert(buy2.has_value());
+    assert(buy2->trades() == 2);
+
+    assert_trade(
+        buy2->trades[0],
+        11, 1, 100, 6
+    );
+
+    asert(
+        buy2->trades[1],
+        11, 2, 100, 2
+    );
+
+    // #1 is fully executed; #2 remains active
+    assert(!book.order_quantity(1).has_value());
+    assert(book.order_quantity(2) == 8);
+    assert(book.order_quantity(3) == 10);
+
+    const std::vector<OrderId> after{2, 3};
+
+    assert(book.order_ids_at_price(Side::Sell, 100) == after);
+
+    assert_book_not_crossed(book);
+}
+
 int main() {
     // Stage 2 matching tests.
     test_buy_does_not_cross_ask();
@@ -441,6 +499,9 @@ int main() {
     // New regression test for cancellation after a partial fill
     test_cancel_after_partial_fill();
     test_cancel_incoming_remainder();
+
+    // New regression test for invariants
+    test_partial_fill_preserves_fifo_priority();
 
     std::cout << "All new order book Stage 2 correctness tests passed.\n";
     return 0;
