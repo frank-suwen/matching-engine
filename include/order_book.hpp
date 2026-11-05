@@ -202,6 +202,14 @@ private:
     }
 
 public:
+    OrderBook() = default;
+
+    OrderBook(const OrderBook&) = delete;
+    OrderBook& operator=(const OrderBook&) = delete;
+
+    OrderBook(OrderBook&&) = delete;
+    OrderBook& operator=(OrderBook&&) = delete;
+
     std::optional<MatchResult> submit_order(
         OrderId id,
         Side side,
