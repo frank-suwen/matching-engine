@@ -456,14 +456,14 @@ void test_partial_fill_preserves_fifo_priority() {
     auto buy2 = book.submit_order(11, Side::Buy, 100, 8);
 
     assert(buy2.has_value());
-    assert(buy2->trades() == 2);
+    assert(buy2->trades.size() == 2);
 
     assert_trade(
         buy2->trades[0],
         11, 1, 100, 6
     );
 
-    asert(
+    assert_trade(
         buy2->trades[1],
         11, 2, 100, 2
     );
