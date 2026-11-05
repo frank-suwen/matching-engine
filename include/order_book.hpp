@@ -150,6 +150,58 @@ private:
         }
     }
 
+    template <typename BookType>
+    void rest_in_book(
+        BookType& book,
+        OrderId id,
+        Side side,
+        Price price,
+        Quantity quantity
+    ) {
+        // 1. Find or create the price level.
+        auto [level_it, created] = book.try_emplace(price);
+
+        auto& level = level_it->second;
+
+        // 2. Insert the order into the FIFO list.
+        try {
+            level.push_back(Order{
+                id, side, price, quantity
+            });
+        } catch (...) {
+            // If we created a new level, remove it
+            if (created) {
+                book.erase(level_it);
+            }
+
+            throw;
+        }
+
+        auto order_it = std::prev(level.end());
+
+        // 3. Insert the ID index entry
+        try {
+            const bool inserted = orders_.emplace(
+                id,
+                OrderLocation{side, price, order_it}
+            ).second;
+
+            if (!inserted) {
+                throw std::logic_error("duplicate active order ID");
+            }
+        } catch (...) {
+            // Roll back the list insertion.
+            level.erase(order_it);
+
+            // Remove the level if now empty
+            if (level.empty()) {
+                book.erase(level_it);
+            }
+
+            throw;
+        }
+    }
+
 public:
     std::optional<MatchResult> submit_order(
         OrderId id,
